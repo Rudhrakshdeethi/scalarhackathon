@@ -1,0 +1,23 @@
+version: "0.1.0"
+name: "fin-rebalancer-hackathon"
+description: "AI-driven portfolio rebalancing environment."
+category: "finance"
+author: "YourName"
+action_space:
+  type: "object"
+  properties:
+    action_type: { type: "string", enum: ["buy", "sell", "hold"] }
+    asset_id: { type: "string" }
+    quantity: { type: "number" }
+tasks:
+  - id: "task_01"
+    name: "Static Rebalance"
+    difficulty: "easy"
+  - id: "task_02"
+    name: "Drift Correction"
+    difficulty: "medium"
+  - id: "task_03"
+    name: "Black Swan Recovery"
+    difficulty: "hard"
+runtime: "docker"
+app_port: 7860
