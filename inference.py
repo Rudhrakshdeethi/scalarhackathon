@@ -3,45 +3,66 @@ import requests
 import json
 from openai import OpenAI
 
-# 1. Configuration
-# The validator uses your Space's URL or localhost:7860
-BASE_URL = os.getenv("OPENENV_URL", "http://localhost:7860")
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+# MANDATORY VARIABLES FROM THE EXAMPLE
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+MODEL_NAME = os.getenv("MODEL_NAME")
 
-client = OpenAI(
-    api_key=GEMINI_KEY,
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-)
+# YOUR SERVER URL (Hugging Face internal or localhost)
+# The validator usually sets OPENENV_URL, otherwise use your Space's direct URL
+SERVER_URL = os.getenv("OPENENV_URL", "http://localhost:7860")
 
-def run_inference(task_id="task_01"):
-    # RESET: Start the environment
-    response = requests.post(f"{BASE_URL}/reset", params={"task_id": task_id})
-    obs = response.json()
+def main():
+    # MANDATORY: Use OpenAI Client as per instructions
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    # 1. RESET: Start the financial task
+    # We'll default to task_01 unless specified
+    try:
+        response = requests.post(f"{SERVER_URL}/reset", params={"task_id": "task_01"})
+        observation = response.json()
+        print(f"Episode started: {observation}")
+    except Exception as e:
+        print(f"Failed to connect to server at {SERVER_URL}: {e}")
+        return
+
     done = False
-    
-    print(f"Started {task_id}")
+    step = 1
+    max_steps = 10 # Adjust as needed
 
-    # LOOP: Step until finished
-    while not done:
-        # Construct the prompt for Gemini
-        prompt = f"Current State: {obs}. Maintain 50/50 cash-to-asset ratio. Output JSON: {{'action_type': 'buy/sell/hold', 'asset_id': 'BTC', 'quantity': float}}"
-        
+    while not done and step <= max_steps:
+        # 2. PROMPT: Format the financial data for Gemini
+        prompt = f"""
+        Step: {step}
+        Goal: Maintain 50/50 Cash to Asset Ratio.
+        State: {observation}
+        Reply with exactly one JSON action: {{"action_type": "buy/sell/hold", "asset_id": "BTC", "quantity": float}}
+        """
+
+        # 3. INFERENCE: Call the LLM using the mandatory client
         completion = client.chat.completions.create(
-            model="gemini-1.5-flash",
+            model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
+            temperature=0.2
         )
         
-        action = json.loads(completion.choices[0].message.content)
+        response_text = completion.choices[0].message.content
         
-        # STEP: Send action to your FastAPI server
-        step_resp = requests.post(f"{BASE_URL}/step", json=action).json()
-        obs = step_resp["observation"]
-        done = step_resp["done"]
+        # Simple cleanup if model adds markdown backticks
+        action_json = response_text.replace("```json", "").replace("```", "").strip()
+        action = json.loads(action_json)
+
+        print(f"Step {step}: Model suggested -> {action}")
+
+        # 4. STEP: Post the action to your FastAPI environment
+        step_result = requests.post(f"{SERVER_URL}/step", json=action).json()
         
-    # FINAL: Get score from your grader endpoint
-    final_score = requests.get(f"{BASE_URL}/grader").json()
-    print(f"Final Score: {final_score}")
+        observation = step_result["observation"]
+        reward = step_result["reward"]
+        done = step_result["done"]
+
+        print(f"Reward: {reward} | Done: {done}")
+        step += 1
 
 if __name__ == "__main__":
-    run_inference()
+    main()
