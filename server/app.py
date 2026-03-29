@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from models import Action, Reward
 from engine import FinanceEngine
 from grader import calculate_grade
+import uvicorn
+
 
 app = FastAPI(title="FinEnv-Rebalancer")
 env = FinanceEngine()
@@ -46,3 +48,9 @@ async def get_grader_score():
 @app.post("/baseline")
 async def trigger_baseline():
     return {"status": "success", "baseline_scores": {"task_01": 0.85, "task_02": 0.72}}
+
+def main():
+    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
+
+if __name__ == "__main__":
+    main()
