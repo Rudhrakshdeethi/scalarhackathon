@@ -50,7 +50,7 @@ async def trigger_baseline():
     return {"status": "success", "baseline_scores": {"task_01": 0.85, "task_02": 0.72}}
 
 def main():
-    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
 
+    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
 if __name__ == "__main__":
     main()
