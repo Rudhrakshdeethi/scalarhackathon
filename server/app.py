@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from models import Action, Reward
 from engine import FinanceEngine
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from grader import calculate_grade
 import uvicorn
 
